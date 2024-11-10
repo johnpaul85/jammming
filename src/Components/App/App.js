@@ -1,73 +1,68 @@
-import React from 'react';
-import './App.css';
-import {SearchBar} from '../SearchBar/SearchBar';
-import {SearchResults} from '../SearchResults/SearchResults';
-import {Playlist} from '../Playlist/Playlist';
-import {Spotify} from '../../util/Spotify';
+import React, { useState, useCallback } from "react";
+import "./App.css";
 
-class App extends React.Component {
-  constructor(props){
-    super(props);
-    this.state = {
-      searchResults: [],
-      playlistName: 'My Playlist',
-      playlistTracks: []
-    };
-    this.addTrack = this.addTrack.bind(this);
-    this.removeTrack = this.removeTrack.bind(this);
-    this.updatePlaylistName = this.updatePlaylistName.bind(this);
-    this.savePlaylist = this.savePlaylist.bind(this);
-    this.search = this.search.bind(this);
-  }
-  addTrack(track){
-    let trackList = this.state.playlistTracks;
-    if(trackList.find(x => x.id === track.id)){
-      return;
-    }
-    trackList.push(track);
-    this.setState({playlistTracks: trackList});
-  }
-  removeTrack(track){
-    let trackList = this.state.playlistTracks;
-    trackList = trackList.filter(x => x.id !== track.id);
-    this.setState({playlistTracks: trackList});
-  }
-  updatePlaylistName(name){
-    this.setState({playlistName: name});
-  }
-  savePlaylist(){
-    const trackURIs = this.state.playlistTracks.map(track => track.uri);
-    Spotify.savePlayList(this.state.playlistName, trackURIs).then(() => {
-      this.setState({
-        playlistName: 'New Playlist',
-        playlistTracks: []
-      })
-    })
-  }
-  search(term){
-    Spotify.search(term).then(searchResults => {
-      this.setState({searchResults: searchResults})
+import Playlist from "../Playlist/Playlist";
+import SearchBar from "../SearchBar/SearchBar";
+import SearchResults from "../SearchResults/SearchResults";
+import Spotify from "../../util/Spotify";
+
+const App = () => {
+  const [searchResults, setSearchResults] = useState([]);
+  const [playlistName, setPlaylistName] = useState("New Playlist");
+  const [playlistTracks, setPlaylistTracks] = useState([]);
+
+  const search = useCallback((term) => {
+    Spotify.search(term).then(setSearchResults);
+  }, []);
+
+  const addTrack = useCallback(
+    (track) => {
+      if (playlistTracks.some((savedTrack) => savedTrack.id === track.id))
+        return;
+
+      setPlaylistTracks((prevTracks) => [...prevTracks, track]);
+    },
+    [playlistTracks]
+  );
+
+  const removeTrack = useCallback((track) => {
+    setPlaylistTracks((prevTracks) =>
+      prevTracks.filter((currentTrack) => currentTrack.id !== track.id)
+    );
+  }, []);
+
+  const updatePlaylistName = useCallback((name) => {
+    setPlaylistName(name);
+  }, []);
+
+  const savePlaylist = useCallback(() => {
+    const trackUris = playlistTracks.map((track) => track.uri);
+    Spotify.savePlaylist(playlistName, trackUris).then(() => {
+      setPlaylistName("New Playlist");
+      setPlaylistTracks([]);
     });
-  }
-  render(){
-    return (
+  }, [playlistName, playlistTracks]);
+
+  return (
     <div>
-      <h1>Ja<span className="highlight">mmm</span>ing</h1>
+      <h1>
+        Ja<span className="highlight">mmm</span>ing
+      </h1>
       <div className="App">
-        <SearchBar onSearch={this.search}/>
+        <SearchBar onSearch={search} />
         <div className="App-playlist">
-          <SearchResults searchResults={this.state.searchResults}
-                  onAdd={this.addTrack}/>
-          <Playlist playlistName={this.state.playlistName} 
-                  playlistTracks={this.state.playlistTracks}
-                  onRemove={this.removeTrack}
-                  onNameChange={this.updatePlaylistName}
-                  onSave={this.savePlaylist} />
+          <SearchResults searchResults={searchResults} onAdd={addTrack} />
+          <Playlist
+            playlistName={playlistName}
+            playlistTracks={playlistTracks}
+            onNameChange={updatePlaylistName}
+            onRemove={removeTrack}
+            onSave={savePlaylist}
+          />
         </div>
       </div>
     </div>
-    )
-  }
-}
+  );
+};
 
 export default App;
